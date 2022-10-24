@@ -23,5 +23,5 @@ body{
 .panel_element{
     width: inherit;
     height: 30px;
-    transform: translate(8px, 0)
+    transform: translate(8px, 0);
 }
