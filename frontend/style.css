@@ -25,3 +25,11 @@ body{
     height: 30px;
     transform: translate(8px, 0);
 }
+
+.footer{
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    padding-bottom: auto;
+    margin: 20px;
+}
