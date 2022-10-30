@@ -10,6 +10,8 @@ const sqlite3 = require('sqlite3').verbose();
 
 const fs = require('fs');
 
+const error_codes = require('./error_codes');
+
 let api_port = process.env.api_port;
 
 let create_db_contents = false;
@@ -125,7 +127,7 @@ App.post('/create_user', (req, res) => {
         return -1;
     }
 
-    console.log(req.body);
+    // console.log(req.body);
 
     if (!req.body.login || !req.body.password || !req.body.email){
         res.status = 400; // BAD REQUEST
@@ -138,24 +140,56 @@ App.post('/create_user', (req, res) => {
     const password = req.body.password;
     const email = req.body.email;
 
-    // check if user already exists in database
-
     // Do checks if login or passwords are correct, not sql injection attempts.
     // TODO
 
-    // Append data to database
-    Database.exec(`INSERT INTO users (username, password, email) VALUES ("${login}", "${password}", "${email}");`, (err) => {
+    // check if user already exists in database
+    Database.all(`SELECT * FROM users WHERE username="${login}" OR email="${email}"`, (err, rows) => {
         if (err){
-            console.log('Account creation failed!');
-            res.sendFile({ok:false});
+            console.log("There was error during checking for user in database!");
+            res.send({
+                error_code : error_codes.ERROR.DATABASE_FAILED,
+                details : error_codes.ERROR.FETCH_ERROR
+            });
+            return true;
         }
+        if (rows.length != 0) {
+            res.send({
+                error_code : error_codes.ERROR.USER_ALREADY_EXISTS,
+                details : error_codes.ERROR.NO_DETAILS
+            });
+            return true;
+        }
+
+        return false;
     });
+
+    // Append data to database
+    const DatabaseAddUser = async() => {
+        Database.exec(`INSERT INTO users (username, password, email) VALUES ("${login}", "${password}", "${email}");`, (err) => {
+            if (err){
+                // console.log('Account creation failed!');
+                res.send({
+                    error_code : error_codes.ERROR.DATABASE_FAILED,
+                    details : error_codes.ERROR.FETCH_ERROR
+                });
+                return true;
+            }
+            return false;
+        }
+    )};
+    
+    result = DatabaseAddUser();
+    
+    if (result) return -1;
 
     // Set sessions for user
     req.session.login = login;
     req.session.loggedin = true;
 
-    res.send({ok: true})
+    res.send({
+        "error_code" :  error_codes.ERROR.NO_ERROR
+    })
 });
 
 // Listen
