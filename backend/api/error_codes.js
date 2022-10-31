@@ -9,6 +9,10 @@ class ERROR{
 
         // user errors
         this.USER_ALREADY_EXISTS = 200;
+
+        // HTTP ERRORS
+        this.BAD_REQUEST = 300;
+        this.FORBIDDEN = 301;
     }
 }
 

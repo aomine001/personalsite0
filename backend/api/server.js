@@ -86,6 +86,30 @@ function SpecialApiKeyCheckGet(query){
     else return -1;
 }
 
+async function UserExistsInDB(Query){
+    return await Database.all(Query, (err, rows) => {
+        if (err) {
+            return true;
+        } else {
+            if (rows.length > 0) {
+                return false;
+            }
+        }
+    });
+}
+
+async function InsertUserToDatabase(Query){
+    return await Database.exec(Query, (err) => {
+        if (err){
+            return true;
+        } else {
+            return false;
+        }
+    }).then(function(){
+        console.log()
+    });
+}
+
 // Routes: 
 App.post('/',(req, res) => {
     let key_presence = SpecialApiKeyCheck(req.body);
@@ -122,7 +146,9 @@ App.post('/create_user', (req, res) => {
 
     if (!key_presence){
         res.status = 403; // FORBIDDEN
-        res.sendFile(__dirname + '\\statuses\\403.html');
+        res.sendFile({
+            error_code : error_codes.ERROR.FORBIDDEN
+        });
 
         return -1;
     }
@@ -131,7 +157,10 @@ App.post('/create_user', (req, res) => {
 
     if (!req.body.login || !req.body.password || !req.body.email){
         res.status = 400; // BAD REQUEST
-        res.sendFile(__dirname + '\\statuses\\400.html');
+        res.send({
+            error_code : error_codes.ERROR.BAD_REQUEST,
+            details : error_codes.ERROR.NO_DETAILS
+        });
 
         return -1;
     }
@@ -140,48 +169,17 @@ App.post('/create_user', (req, res) => {
     const password = req.body.password;
     const email = req.body.email;
 
-    // Do checks if login or passwords are correct, not sql injection attempts.
-    // TODO
+    // TODO: Do checks if login or passwords are correct, not sql injection attempts.
+    // TODO: CHECK IF THERE'S ALREADY USER REGISTERED AT THAT USERNAME OR EMAIL!!!!
+    // TODO: ADD USER TO DATABASE
 
-    // check if user already exists in database
-    Database.all(`SELECT * FROM users WHERE username="${login}" OR email="${email}"`, (err, rows) => {
-        if (err){
-            console.log("There was error during checking for user in database!");
-            res.send({
-                error_code : error_codes.ERROR.DATABASE_FAILED,
-                details : error_codes.ERROR.FETCH_ERROR
-            });
-            return true;
-        }
-        if (rows.length != 0) {
-            res.send({
-                error_code : error_codes.ERROR.USER_ALREADY_EXISTS,
-                details : error_codes.ERROR.NO_DETAILS
-            });
-            return true;
-        }
+    const CheckIfUserExistsSQL = `SELECT * FROM users WHERE username="${login}" OR email="${email}"`;
+    const InsertUserToDB  = `INSERT INTO users (username, password, email) VALUES ("${login}", "${password}", "${email}");`;
 
-        return false;
-    });
+    let ResultOfExistence = UserExistsInDB(CheckIfUserExistsSQL);
+    let ResultOfInserting = InsertUserToDatabase(InsertUserToDB);
 
-    // Append data to database
-    const DatabaseAddUser = async() => {
-        Database.exec(`INSERT INTO users (username, password, email) VALUES ("${login}", "${password}", "${email}");`, (err) => {
-            if (err){
-                // console.log('Account creation failed!');
-                res.send({
-                    error_code : error_codes.ERROR.DATABASE_FAILED,
-                    details : error_codes.ERROR.FETCH_ERROR
-                });
-                return true;
-            }
-            return false;
-        }
-    )};
-    
-    result = DatabaseAddUser();
-    
-    if (result) return -1;
+    console.log(ResultOfExistence, ResultOfInserting)
 
     // Set sessions for user
     req.session.login = login;
